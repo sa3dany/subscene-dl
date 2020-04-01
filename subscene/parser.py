@@ -66,6 +66,7 @@ class MoviePageParser(BaseParser):
     def __init__(self, html=""):
         super().__init__(html)
         self.data = []
+        self._empty = String(quant="?", css=".subtitles.byFilm tbody tr td.empty")
         self._rows = Group(
             quant="*",
             css=".subtitles.byFilm tbody tr",
@@ -95,7 +96,8 @@ class MoviePageParser(BaseParser):
 
     def parse(self, base_url=None):
         self.parse_errors()
-        self.data = self._rows.parse(self.html, url=base_url)
+        if not self._empty.parse(self.html):
+            self.data = self._rows.parse(self.html, url=base_url)
 
 
 class SubtitlePageParser(BaseParser):

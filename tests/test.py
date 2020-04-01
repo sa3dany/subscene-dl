@@ -65,7 +65,7 @@ class TestMoviePageParsing(unittest.TestCase):
     def tearDown(self):
         self.parser = None
 
-    def test(self):
+    def test_many(self):
         self.parser.html = (SAMPLES / "movie/movie.html").read_text(encoding="utf-8")
         self.parser.parse()
         self.assertEqual(
@@ -92,6 +92,13 @@ class TestMoviePageParsing(unittest.TestCase):
                 "url": "/subtitles/official-secrets/arabic/2088094",
             },
         )
+
+    def test_empty(self):
+        self.parser.html = (SAMPLES / "movie/movie-empty.html").read_text(
+            encoding="utf-8"
+        )
+        self.parser.parse()
+        self.assertEqual(self.parser.data, [])
 
 
 class TestSubtitlePageParsing(unittest.TestCase):

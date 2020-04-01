@@ -1,33 +1,108 @@
-from html.parser import HTMLParser
+import re
+from lxml import etree
+from xextract import Element, Group, Prefix, String, Url
+from xextract.parsers import ParsingError
 
 
-class MovieSearchResultsParser(HTMLParser):
-    def __init__(self):
-        HTMLParser.__init__(self)
-        self.movie_url = None
+def outer_html(node):
+    return etree.tostring(node).decode()
 
-        self._in_exact = False
-        self._in_exact_item = False
 
-    def handle_starttag(self, tag, attrs):
-        if self.movie_url:
-            return
+def strip(string):
+    return string.strip()
 
-        attrs_dict = dict(attrs)
-        if attrs_dict.get("class", None) == "exact":
-            self.in_exact = True
 
-        elif self.in_exact and tag == "a":
-            self.in_exact_item = True
-            self.movie_url = attrs_dict["href"]
+class TooManyRequestsError(Exception):
+    """Too many requests"""
 
-    def handle_data(self, data):
-        if self.in_exact_item:
-            print(f"Exact match: {data}")
 
-    def handle_endtag(self, tag):
-        if self.in_exact and tag == "ul":
-            self.in_exact = False
+class BaseParser:
+    THROTTLE_PATTERN = re.compile(r"Too?.+?many.+?requests", flags=re.IGNORECASE)
 
-        elif self.in_exact_item and tag == "a":
-            self.in_exact_item = False
+    def __init__(self, html):
+        self.html = html
+
+    def parse_errors(self):
+        if self.THROTTLE_PATTERN.search(self.html):
+            raise TooManyRequestsError
+
+
+class MovieSearchResultsParser(BaseParser):
+    def __init__(self, html=""):
+        super().__init__(html)
+        self.data = {"exact": None, "close": None}
+        self._sections = Prefix(
+            css=".search-result",
+            children=[
+                Element(
+                    name="exact", css=".exact + ul", quant="?", callback=outer_html
+                ),
+                Element(
+                    name="close", css=".close + ul", quant="?", callback=outer_html
+                ),
+            ],
+        )
+        self._movie = Group(
+            quant="*",
+            css="li",
+            children=[
+                Url(name="url", css=".title a", quant=1),
+                String(name="title", css=".title a", quant=1, callback=strip),
+            ],
+        )
+
+    def parse(self, base_url=None):
+        self.parse_errors()
+        sections = self._sections.parse(self.html)
+        exact = sections["exact"]
+        if exact:
+            self.data["exact"] = self._movie.parse(exact, url=base_url)
+        close = sections["close"]
+        if close:
+            self.data["close"] = self._movie.parse(close, url=base_url)
+
+
+class MoviePageParser(BaseParser):
+    def __init__(self, html=""):
+        super().__init__(html)
+        self.data = []
+        self._rows = Group(
+            quant="*",
+            css=".subtitles.byFilm tbody tr",
+            children=[
+                Url(name="url", css="td.a1 a", quant="1"),
+                String(
+                    name="name",
+                    css="td.a1 a span:last-child",
+                    quant="1",
+                    callback=strip,
+                ),
+                String(
+                    name="rating",
+                    css="td.a1 a span:first-child",
+                    attr="class",
+                    quant="1",
+                    callback=self.parse_rating,
+                ),
+            ],
+        )
+
+    def parse_rating(self, rating_class):
+        pattern = re.compile(r".*?(positive|neutral)-icon", flags=re.IGNORECASE)
+        if not pattern.match(rating_class):
+            raise ParsingError
+        return pattern.sub(r"\1", rating_class)
+
+    def parse(self, base_url=None):
+        self.parse_errors()
+        self.data = self._rows.parse(self.html, url=base_url)
+
+
+class SubtitlePageParser(BaseParser):
+    def __init__(self, html=""):
+        super().__init__(html)
+        self.data = None
+        self._download = Url(quant="1", css=".download a")
+
+    def parse(self, base_url=None):
+        self.data = self._download.parse(self.html, url=base_url)

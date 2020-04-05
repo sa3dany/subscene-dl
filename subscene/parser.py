@@ -89,7 +89,7 @@ class MoviePageParser(BaseParser):
         )
 
     def parse_rating(self, rating_class):
-        pattern = re.compile(r".*?(positive|neutral)-icon", flags=re.IGNORECASE)
+        pattern = re.compile(r".*?(positive|neutral|bad)-icon", flags=re.IGNORECASE)
         if not pattern.match(rating_class):
             raise ParsingError
         return pattern.sub(r"\1", rating_class)

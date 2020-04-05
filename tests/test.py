@@ -1,13 +1,20 @@
 import unittest
 from pathlib import Path
-from subscene import parser, BASE_URL
+from subscene import BASE_URL
+
+from subscene.htmlparse import (
+    TooManyRequestsError,
+    MovieSearchResultsParser,
+    MoviePageParser,
+    SubtitlePageParser,
+)
 
 SAMPLES = Path(__file__).parent / "samples"
 
 
 class TestMovieSearchResultsParsing(unittest.TestCase):
     def setUp(self):
-        self.parser = parser.MovieSearchResultsParser()
+        self.parser = MovieSearchResultsParser()
 
     def tearDown(self):
         self.parser = None
@@ -54,13 +61,13 @@ class TestMovieSearchResultsParsing(unittest.TestCase):
 
     def test_rate_limit(self):
         self.parser.html = (SAMPLES / "rate-limit.html").read_text()
-        with self.assertRaises(parser.TooManyRequestsError):
+        with self.assertRaises(TooManyRequestsError):
             self.parser.parse(base_url=BASE_URL)
 
 
 class TestMoviePageParsing(unittest.TestCase):
     def setUp(self):
-        self.parser = parser.MoviePageParser()
+        self.parser = MoviePageParser()
 
     def tearDown(self):
         self.parser = None
@@ -125,7 +132,7 @@ class TestMoviePageParsing(unittest.TestCase):
 
 class TestSubtitlePageParsing(unittest.TestCase):
     def setUp(self):
-        self.parser = parser.SubtitlePageParser()
+        self.parser = SubtitlePageParser()
 
     def tearDown(self):
         self.parser = None

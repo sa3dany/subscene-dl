@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="subscene-dl-sa3dany",
-    version="0.0.1",
+    version="0.1",
     author="Mohamed ElSaadany",
     author_email="mhsaadany@gmail.com",
     description="Download movie subtitles from subscene.com",

@@ -69,18 +69,18 @@ class MoviePageParser(BaseParser):
         self._empty = String(quant="?", css=".subtitles.byFilm tbody tr td.empty")
         self._rows = Group(
             quant="*",
-            css=".subtitles.byFilm tbody tr",
+            css=".subtitles.byFilm tbody td.a1",
             children=[
-                Url(name="url", css="td.a1 a", quant="1"),
+                Url(name="url", css="a", quant="1"),
                 String(
                     name="name",
-                    css="td.a1 a span:last-child",
+                    css="span:last-child",
                     quant="1",
                     callback=strip,
                 ),
                 String(
                     name="rating",
-                    css="td.a1 a span:first-child",
+                    css="span:first-child",
                     attr="class",
                     quant="1",
                     callback=self.parse_rating,

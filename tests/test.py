@@ -93,6 +93,28 @@ class TestMoviePageParsing(unittest.TestCase):
             },
         )
 
+    def test_many_2(self):
+        self.parser.html = (SAMPLES / "movie/movie-inline-ad.html").read_text(
+            encoding="utf-8"
+        )
+        self.parser.parse()
+        self.assertEqual(
+            self.parser.data[4],
+            {
+                "name": "Parasite.2019.1080p.BluRay.x264-REGRET",
+                "rating": "positive",
+                "url": "/subtitles/parasite-gisaengchung/arabic/2146903",
+            },
+        )
+        self.assertEqual(
+            self.parser.data[5],
+            {
+                "name": "Parasite.2019.720p.BluRay.x264-REGRET",
+                "rating": "positive",
+                "url": "/subtitles/parasite-gisaengchung/arabic/2146903",
+            },
+        )
+
     def test_empty(self):
         self.parser.html = (SAMPLES / "movie/movie-empty.html").read_text(
             encoding="utf-8"

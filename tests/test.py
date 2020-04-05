@@ -1,7 +1,9 @@
 import unittest
+import doctest
 from pathlib import Path
-from subscene import BASE_URL
 
+import subscene.cli
+from subscene.api import BASE_URL
 from subscene.htmlparse import (
     TooManyRequestsError,
     MovieSearchResultsParser,
@@ -10,6 +12,12 @@ from subscene.htmlparse import (
 )
 
 SAMPLES = Path(__file__).parent / "samples"
+
+
+def load_tests(loader, tests, ignore):
+    tests.addTests(doctest.DocTestSuite(subscene.cli, optionflags=doctest.ELLIPSIS))
+    tests.addTests(doctest.DocTestSuite(subscene.api, optionflags=doctest.ELLIPSIS))
+    return tests
 
 
 class TestMovieSearchResultsParsing(unittest.TestCase):

@@ -19,5 +19,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.8",
-    install_requires=['requests'],
+    install_requires=["requests", "jellyfish"],
+    entry_points={"console_scripts": ["subscene-dl = subscene.cli:main"]},
 )

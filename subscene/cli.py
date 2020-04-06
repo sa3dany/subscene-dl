@@ -1,5 +1,6 @@
 import re
 import argparse
+from iso639 import languages
 from subscene.api import Subscene
 
 SOURCES = {
@@ -28,24 +29,41 @@ def movie_title(string) -> dict:
     return {"title": match.group(1), "year": match.group(2)}
 
 
-def subtitle_language(language_code):
-    """Converts a language code like "en", "ar" to the internal numeric ID
+def type_language(code):
+    """Converts a language code like "ar", "fr" or "pt-br" to the internal numeric ID
     used by subscene
 
-    >>> subtitle_language("en")
-    {'description': 'English', 'subscene_id': '13'}
+    >>> type_language("mni")
+    {'id': 65, 'code': 'mni'}
 
-    >>> subtitle_language("sq")
+    >>> type_language("pt-br")
+    {'id': 4, 'code': 'pt'}
+
+    >>> type_language("tu")
     Traceback (most recent call last):
     argparse.ArgumentTypeError: ...
     """
+    if code == "pt-br":
+        # Special case. See comment in api.py
+        return {"id": Subscene.LANGUAGES[code], "code": "pt"}
 
-    if language_code not in Subscene.LANGUAGES:
+    try:
+        if len(code) == 2:
+            language = languages.get(part1=code)
+        else:
+            language = languages.get(part2b=code)
+    except KeyError:
         raise argparse.ArgumentTypeError(
-            "The language specified is either not supported by"
-            + " subscene or not implemented"
+            "The language code specified is not a valid ISO-639-1 or ISO-639-2/B code"
         )
-    return Subscene.LANGUAGES[language_code]
+
+    available_code = language.part1 or language.part2b
+    if available_code not in Subscene.LANGUAGES:
+        raise argparse.ArgumentTypeError(
+            "The language code specified is not supported by subscene.com"
+        )
+
+    return {"id": Subscene.LANGUAGES[available_code], "code": code}
 
 
 def source_filter_gen(source):
@@ -71,7 +89,7 @@ def download(title, year, language, source=None):
     if not title_info:
         return
 
-    language_id = language["subscene_id"]
+    language_id = language["id"]
     subtitles = sc.subtitles(title_info["id"], language_id, hi_flag=Subscene.HINONE)
     if not len(subtitles):
         return
@@ -102,7 +120,9 @@ def main(argv=None):
     parser.add_argument("-s", "--source", help="Release source", choices=SOURCES)
     parser.add_argument("movie", help="Movie title", type=movie_title)
     parser.add_argument(
-        "language", help="Subtitle language code", type=subtitle_language
+        "language",
+        help="ISO-639-1 (2-letter) or ISO-639-2/B (3-letter) language code",
+        type=type_language,
     )
     args = parser.parse_args()
     download(

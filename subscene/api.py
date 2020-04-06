@@ -27,35 +27,92 @@ class Subscene:
     return structured data.
     """
 
-    # These are taken for the popular languages section on subscene.com.
-    # More languages are supported by subscene.com.
+    # These are taken from the filter page on subscene.com. They all
+    # have keys corresponding to the ISO 639-1 (with fallback to 639-3
+    # if a 2 letter code is not avilable) code except for Brazillian
+    # Portuguese which does not have a coresponding code and instead I
+    # choose to use the IETF tag 'pt-BR'
     LANGUAGES = {
-        "ar": {"description": "Arabic", "subscene_id": "2", "code": "ar"},
-        "da": {"description": "Danish", "subscene_id": "10", "code": "da"},
-        "nl": {"description": "Dutch", "subscene_id": "11", "code": "nl"},
-        "en": {"description": "English", "subscene_id": "13", "code": "en"},
-        "fa": {"description": "Persian", "subscene_id": "46", "code": "fa"},
-        "fi": {"description": "Finnish", "subscene_id": "17", "code": "fi"},
-        "fr": {"description": "French", "subscene_id": "18", "code": "fr"},
-        "el": {"description": "Greek", "subscene_id": "21", "code": "el"},
-        "iw": {"description": "Hebrew", "subscene_id": "22", "code": "iw"},
-        "id": {"description": "Indonesian", "subscene_id": "44", "code": "id"},
-        "it": {"description": "Italian", "subscene_id": "26", "code": "it"},
-        "ko": {"description": "Korean", "subscene_id": "28", "code": "ko"},
-        "ms": {"description": "Malay", "subscene_id": "50", "code": "ms"},
-        "no": {"description": "Norwegian", "subscene_id": "30", "code": "no"},
-        "pt": {"description": "Portuguese", "subscene_id": "32", "code": "pt"},
-        "ro": {"description": "Romanian", "subscene_id": "33", "code": "ro"},
-        "es": {"description": "Spanish", "subscene_id": "38", "code": "es"},
-        "sv": {"description": "Swedish", "subscene_id": "39", "code": "sv"},
-        "tr": {"description": "Turkish", "subscene_id": "41", "code": "tr"},
-        "vi": {"description": "Vietnamese", "subscene_id": "45", "code": "vi"},
-        "pt-br": {
-            "description": "Brazillian Portuguese",
-            "subscene_id": "4",
-            "code": "pt",
-        },
+        "sq": 1,
+        "ar": 2,
+        "pt-br": 4,
+        "bg": 5,
+        "hr": 8,
+        "cs": 9,
+        "da": 10,
+        "nl": 11,
+        "en": 13,
+        "et": 16,
+        "fi": 17,
+        "fr": 18,
+        "de": 19,
+        "el": 21,
+        "iw": 22,
+        "hu": 23,
+        "is": 25,
+        "it": 26,
+        "ja": 27,
+        "ko": 28,
+        "lv": 29,
+        "no": 30,
+        "pl": 31,
+        "pt": 32,
+        "ro": 33,
+        "ru": 34,
+        "sr": 35,
+        "sk": 36,
+        "sl": 37,
+        "es": 38,
+        "sv": 39,
+        "th": 40,
+        "tr": 41,
+        "ur": 42,
+        "lt": 43,
+        "id": 44,
+        "vi": 45,
+        "fa": 46,
+        "eo": 47,
+        "mk": 48,
+        "ca": 49,
+        "ms": 50,
+        "hi": 51,
+        "ku": 52,
+        "tl": 53,
+        "bn": 54,
+        "az": 55,
+        "uk": 56,
+        "kl": 57,
+        "si": 58,
+        "ta": 59,
+        "bs": 60,
+        "my": 61,
+        "ka": 62,
+        "te": 63,
+        "ml": 64,
+        "mni": 65,
+        "pa": 66,
+        "ps": 67,
+        "be": 68,
+        "so": 70,
+        "yo": 71,
+        "mn": 72,
+        "hy": 73,
+        "eu": 74,
+        "sw": 75,
+        "su": 76,
+        "kn": 78,
+        "km": 79,
+        "ne": 80,
     }
+
+    # The following languages are not suboprted since they either refer
+    # to and encoding or dual language subtitle zipfiles:
+    #   - Big 5 code (3)
+    #   - Bulgarian/ English (6)
+    #   - Chinese BG code (7)
+    #   - Dutch/ English (12)
+    #   - English/ German (15)
+    #   - Hungarian/ English (24)
 
     # These are the flags used by subscene to filter subtitles based on
     # the availiablity of HI tags. These values are sent as request
@@ -151,7 +208,7 @@ class Subscene:
         return {"id": os.path.basename(urlparse(match["url"]).path), **match}
 
     def subtitles(
-        self, title_id: str, language: str, foreign_only=False, hi_flag=2
+        self, title_id: str, language: int, foreign_only=False, hi_flag=2
     ) -> List[Dict]:
         """Get a list of available subtitles for a given title.
 
@@ -178,7 +235,7 @@ class Subscene:
             headers=dict(Referer=ENDPOINTS["searchbytitle"]),
             cookies=dict(
                 ForeignOnly=str(foreign_only),
-                LanguageFilter=language,
+                LanguageFilter=str(language),
                 HearingImpaired=str(hi_flag),
                 SortSubtitlesByDate=str(False).lower(),
             ),

@@ -1,5 +1,6 @@
 import re
 import argparse
+from pathlib import Path
 from iso639 import languages
 from subscene.api import Subscene
 
@@ -7,26 +8,6 @@ SOURCES = {
     "bluray": dict(tags=["bluray", "brrip", "bdrip"]),
     "web": dict(tags=["webrip", "web-dl"]),
 }
-
-
-def movie_title(string) -> dict:
-    """Represents the expected format for a movie title: "Title (Year)"
-
-    >>> movie_title("Parasite (Gisaengchung / 기생충) (2019)")
-    {'title': 'Parasite (Gisaengchung / 기생충)', 'year': '2019'}
-
-    >>> movie_title("Ne Zha")
-    Traceback (most recent call last):
-    argparse.ArgumentTypeError: ...
-    """
-
-    movie_format = re.compile(r"(.+)\s+\(([12][0-9]{3})\)")
-    match = movie_format.match(string)
-    if not match:
-        raise argparse.ArgumentTypeError(
-            'Invalid movie format.\nAccepted format is "Title (Year)"'
-        )
-    return {"title": match.group(1), "year": match.group(2)}
 
 
 def type_language(code):
@@ -66,6 +47,27 @@ def type_language(code):
     return {"id": Subscene.LANGUAGES[available_code], "code": code}
 
 
+def type_file(string) -> dict:
+    """Represents the expected format for a movie file name: 'Title (Year).ext'"""
+
+    file_path = Path(string)
+    if not file_path.exists():
+        raise argparse.ArgumentTypeError("File does not exist")
+
+    movie_format = re.compile(r"(.+)\s+\(([12][0-9]{3})\)")
+    match = movie_format.match(file_path.stem)
+    if not match:
+        raise argparse.ArgumentTypeError(
+            'Invalid movie format. Accepted format is "Title (Year)"'
+        )
+
+    return {
+        "path": str(file_path.parent),
+        "title": match.group(1),
+        "year": match.group(2),
+    }
+
+
 def source_filter_gen(source):
     """Generates a labda function that can be used to filter subtitles
     based on a realease source (e.g. "BluRay" or "WEB-DL") tags that are
@@ -81,7 +83,7 @@ def source_filter_gen(source):
     return lambda sub: pattern.search(sub) != None
 
 
-def download(title, year, language, source=None):
+def download(title, year, language, output_dir, source=None):
     # TODO: Skip 4k, REPACKS, etc
     sc = Subscene()
 
@@ -106,7 +108,7 @@ def download(title, year, language, source=None):
 
     print(subtitles[0]["name"])
     subtitle_text = sc.download(subtitles[0]["url"])
-    subtitle_filename = f"{title} ({year}).{language['code']}.srt"
+    subtitle_filename = Path(output_dir) / f"{title} ({year}).{language['code']}.srt"
     with open(subtitle_filename, "w+", encoding="utf-8") as subfile:
         subfile.write(subtitle_text)
 
@@ -118,16 +120,21 @@ def main(argv=None):
         prog="subscene-dl", description="Downloads movie subtitles from subscene"
     )
     parser.add_argument("-s", "--source", help="Release source", choices=SOURCES)
-    parser.add_argument("movie", help="Movie title", type=movie_title)
     parser.add_argument(
         "language",
         help="ISO-639-1 (2-letter) or ISO-639-2/B (3-letter) language code",
         type=type_language,
     )
+    parser.add_argument(
+        "file",
+        help="File name must be in the form 'MOVIE_NAME (RELEASE_DATE)'",
+        type=type_file,
+    )
     args = parser.parse_args()
     download(
-        title=args.movie["title"],
-        year=args.movie["year"],
+        output_dir=args.file["path"],
+        title=args.file["title"],
+        year=args.file["year"],
         language=args.language,
         source=args.source,
     )

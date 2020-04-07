@@ -5,7 +5,12 @@
 ### Changes
 
 - Support all languages on subscene.com not just the popular ones. There
-  are some exceptions though which are explained in the notes section below
+  are some exceptions though which are explained in the notes section
+  below
+
+- CLI `file` parameter now expects a media file instead of just a movie title.
+  The subtitle files are now saved to the same directory as the passed
+  media file instead of the current working directory
 
 ### Notes
 

@@ -1,4 +1,6 @@
 import unittest
+import tempfile
+import argparse
 import doctest
 from pathlib import Path
 
@@ -154,6 +156,60 @@ class TestSubtitlePageParsing(unittest.TestCase):
             self.parser.data,
             f"{BASE_URL}/subtitles/arabic-text/tb-75H99hPT5akNHyzyJla9ZN-r_V8IVepJ3sNZNVAHQ8vX4OvGjiskcIlADZs6DDEUzyRN5Skwpdhz4Tlggyx8Q-S3GUe_1W2aiZlH3exU81t32ZxBOntgPa2bZ9YfD0",
         )
+
+
+class TestMovieFileNameMatching(unittest.TestCase):
+    def setUp(self):
+        self.temp = Path(tempfile.mkdtemp())
+        self.movie_file = None
+
+    def tearDown(self):
+        try:
+            self.movie_file.unlink()
+            self.temp.rmdir()
+        except FileNotFoundError:
+            pass
+
+    def test_valid_with_foreign_name(self):
+        self.movie_file = self.temp / "Parasite (Gisaengchung 기생충) (2019).mp4"
+        self.movie_file.touch()
+        self.assertEqual(
+            subscene.cli.type_file(str(self.movie_file)),
+            {
+                "path": str(self.temp),
+                "title": "Parasite (Gisaengchung 기생충)",
+                "year": "2019",
+            },
+        )
+
+    def test_valid_with_utf8(self):
+        self.movie_file = self.temp / "إشاعة حب (1961).mp4"
+        self.movie_file.touch()
+        self.assertEqual(
+            subscene.cli.type_file(str(self.movie_file)),
+            {
+                "path": str(self.temp),
+                "title": "إشاعة حب",
+                "year": "1961",
+            },
+        )
+
+    def test_invalid_missing_year(self):
+        self.movie_file = self.temp / "Ne Zha.mkv"
+        self.movie_file.touch()
+        with self.assertRaises(argparse.ArgumentTypeError):
+            subscene.cli.type_file(str(self.movie_file))
+
+    def test_invalid_missing_title(self):
+        self.movie_file = self.temp / "(1917).avi"
+        self.movie_file.touch()
+        with self.assertRaises(argparse.ArgumentTypeError):
+            subscene.cli.type_file(str(self.movie_file))
+
+    def test_invalid_missing_file(self):
+        self.movie_file = self.temp / "ThisFileWontExists.mkv"
+        with self.assertRaises(argparse.ArgumentTypeError):
+            subscene.cli.type_file(str(self.movie_file))
 
 
 if __name__ == "__main__":

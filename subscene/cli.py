@@ -168,7 +168,7 @@ def main(argv=None):
     parser.add_argument(
         "-s",
         "--source",
-        help="Release source",
+        help="Filter subtitles by release source. Supported values are 'bluray' and 'web'",
         choices=SOURCES,
     )
 

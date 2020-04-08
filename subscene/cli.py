@@ -15,6 +15,7 @@ def keyof(object, value):
 
     Returns `None` if there is no such value in dict.
     """
+
     keys = list(object.keys())
     values = list(object.values())
     try:
@@ -42,6 +43,7 @@ def type_language(code):
     >>> type_language("50")
     {'id': 50, 'code': 'ms'}
     """
+
     if code == "pt-br":
         # Special case. See comment in api.py
         return {"id": Subscene.LANGUAGES[code], "code": "pt"}
@@ -110,12 +112,14 @@ def source_filter_gen(source):
     >>> source_filter_gen(SOURCES["web"])("Another.Example.1999.BDRip")
     False
     """
+
     pattern = re.compile("|".join(source["tags"]), flags=re.IGNORECASE)
     return lambda sub: pattern.search(sub) != None
 
 
 def download(title, year, language, output_dir, source=None):
-    # TODO: Skip 4k, REPACKS, etc
+    """Downloads movie subtitles from subscene"""
+
     sc = Subscene()
 
     title_info = sc.searchbytitle(title, year)
@@ -145,12 +149,12 @@ def download(title, year, language, output_dir, source=None):
 
 
 def main(argv=None):
-    """Entry point for the cli interface"""
+    """CLI entry point"""
 
     parser = argparse.ArgumentParser(
-        prog="subscene-dl", description="Downloads movie subtitles from subscene"
+        description="Downloads movie subtitles from subscene"
     )
-    parser.add_argument("-s", "--source", help="Release source", choices=SOURCES)
+
     parser.add_argument(
         "language",
         help="ISO-639-1 (2-letter) or ISO-639-2/B (3-letter) language code",
@@ -161,7 +165,15 @@ def main(argv=None):
         help="File name must be in the form 'MOVIE_NAME (RELEASE_DATE)'",
         type=type_file,
     )
+    parser.add_argument(
+        "-s",
+        "--source",
+        help="Release source",
+        choices=SOURCES,
+    )
+
     args = parser.parse_args()
+
     download(
         output_dir=args.file["path"],
         title=args.file["title"],

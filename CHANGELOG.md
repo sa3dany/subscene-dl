@@ -12,12 +12,13 @@
   The subtitle files are now saved to the same directory as the passed
   media file instead of the current working directory
 
+- Allow the `language` parameter to be a subscene numeric ID in addition
+  to language codes
+
 ### Notes
 
 Some `languages` on subscene are not actually languages. For example,
-`Big 5 code` is and Chinese Character encoding method. I've opted not to
-support these at the moment. The full list of non-supported
-`languages`along with their corresponding numeric ID are:
+`Big 5 code` is a Chinese Character encoding method.
 
 - Big 5 code (3) (encoding method)
 - Bulgarian/ English (6) (multiple subtitles in a single zip)
@@ -25,6 +26,10 @@ support these at the moment. The full list of non-supported
 - Dutch/ English (12) (multiple subtitles in a single zip)
 - English/ German (15) (multiple subtitles in a single zip)
 - Hungarian/ English (24) (multiple subtitles in a single zip)
+
+You can pass the numeric ID directly to the CLI as the language
+parameter to request a subtitle with these language IDs. Note that for
+dual-subtitle language IDs, the behaviour is undefined.
 
 ## 0.1
 

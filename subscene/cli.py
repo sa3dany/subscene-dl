@@ -10,9 +10,24 @@ SOURCES = {
 }
 
 
+def keyof(object, value):
+    """Returns key in dict that has the given value
+
+    Returns `None` if there is no such value in dict.
+    """
+    keys = list(object.keys())
+    values = list(object.values())
+    try:
+        return keys[values.index(value)]
+    except ValueError:
+        return None
+
+
 def type_language(code):
-    """Converts a language code like "ar", "fr" or "pt-br" to the internal numeric ID
-    used by subscene
+    """Converts a language codes to subscene language ID
+
+    Converts a language code like "ar", "fr" or "pt-br" to the internal numeric ID
+    used by subscene. You can also directly pass the subscene ID.
 
     >>> type_language("mni")
     {'id': 65, 'code': 'mni'}
@@ -23,10 +38,26 @@ def type_language(code):
     >>> type_language("tu")
     Traceback (most recent call last):
     argparse.ArgumentTypeError: ...
+
+    >>> type_language("50")
+    {'id': 50, 'code': 'ms'}
     """
     if code == "pt-br":
         # Special case. See comment in api.py
         return {"id": Subscene.LANGUAGES[code], "code": "pt"}
+
+    # Allow passing subscene numeric language IDs directly
+    try:
+        language_id = int(code)
+        language_code = keyof(Subscene.LANGUAGES, language_id)
+        if language_code:
+            return {"id": language_id, "code": language_code}
+        raise argparse.ArgumentTypeError(
+            "The language ID specified is not a valid subscene language ID"
+        )
+    except ValueError:
+        # A ValueError is raised if the code cannot be parsed to an int
+        pass
 
     try:
         if len(code) == 2:

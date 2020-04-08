@@ -105,8 +105,12 @@ class Subscene:
         "ne": 80,
     }
 
-    # The following languages are not suboprted since they either refer
-    # to and encoding or dual language subtitle zipfiles:
+    # The following `languages` dot not have a language code since they
+    # either refer to an encoding or dual-language subtitle zip files.
+    # You can still use the numeric id to get subtitles with these
+    # language IDs, but dual-subtitle language IDs have no defined
+    # behaviour.
+    #
     #   - Big 5 code (3)
     #   - Bulgarian/ English (6)
     #   - Chinese BG code (7)

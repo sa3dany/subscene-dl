@@ -3,11 +3,7 @@ import argparse
 from pathlib import Path
 from iso639 import languages
 from subscene.api import Subscene
-
-SOURCES = {
-    "bluray": dict(tags=["bluray", "brrip", "bdrip"]),
-    "web": dict(tags=["webrip", "web-dl"]),
-}
+from typing import List, Dict, Optional
 
 
 def keyof(object, value):
@@ -101,23 +97,77 @@ def type_file(string) -> dict:
     }
 
 
-def source_filter_gen(source):
-    """Generates a labda function that can be used to filter subtitles
-    based on a realease source (e.g. "BluRay" or "WEB-DL") tags that are
-    in a subtitle's name.
+def type_tags(string) -> List[str]:
+    """Extracts usefull metadata about a movie release from a string of common tags
 
-    >>> source_filter_gen(SOURCES["bluray"])("Example.Release.2020.BDRip")
-    True
+    This can be a custom list of case-insensitive tags using any separator or the
+    original release file name.
 
-    >>> source_filter_gen(SOURCES["web"])("Another.Example.1999.BDRip")
-    False
+    Based on: https://github.com/matiassingers/scene-release
+
+    >>> type_tags("720p.HDTV")
+    ['720p', 'HDTV']
+
+    >>> type_tags("2160p 4k EXTENDED BLURAY")
+    ['2160p', 'EXTENDED', 'BLURAY']
+
+    >>> type_tags("Extended.Cut.DVDRip")
+    ['Extended.Cut', 'DVDRip']
+
+    >>> type_tags("720p WEB-DL")
+    ['720p', 'WEB-DL']
+
+    >>> type_tags("3D.BLURAY")
+    ['3D', 'BLURAY']
     """
 
-    pattern = re.compile("|".join(source["tags"]), flags=re.IGNORECASE)
-    return lambda sub: pattern.search(sub) != None
+    tags = []
+    patterns = {
+        "resolution": re.compile(r"[1-9][0-9]{2,3}p|4k", re.IGNORECASE),
+        "edition": re.compile(
+            r"UNRATED|DC|(Directors|EXTENDED)[.\s](CUT|EDITION)|EXTENDED|3D|2D|\bNF\b",
+            re.IGNORECASE,
+        ),
+        "type": re.compile(
+            r"CAM|TS(?!C)|TELESYNC|(DVD|BD)SCR|SCR|DDC|R5[.\s]LINE|R5"
+            + r"|(DVD|HD|BR|BD|WEB)Rip|DVDR|(HD|PD)TV|WEB-DL|WEBDL|BluRay",
+            re.IGNORECASE,
+        ),
+    }
+    for tag, pattern in patterns.items():
+        match = pattern.search(string)
+        if match:
+            tags.append(match.group(0))
+    return tags
 
 
-def download(title, year, language, output_dir, source=None):
+def filter_by_tags(subtitles: List[Dict], tags: List[str]) -> List[Dict]:
+    """Filters a list of subtitles using a list of tags
+
+    Each subtitle name must match **all** the tags.
+
+    >>> filter_by_tags([{"name": "y"}], [])
+    [{'name': 'y'}]
+
+    >>> filter_by_tags([{"name": "a.b.c"}, {"name": "a.c"}], ['a', 'b'])
+    [{'name': 'a.b.c'}]
+    """
+
+    if not len(tags):
+        return subtitles
+
+    matching_subtitles = []
+    for subtitle in subtitles:
+        for tag in tags:
+            if tag not in subtitle["name"]:
+                break
+        else:
+            matching_subtitles.append(subtitle)
+
+    return matching_subtitles
+
+
+def download(title, year, language, output_dir, tags=[]):
     """Downloads movie subtitles from subscene"""
 
     sc = Subscene()
@@ -131,13 +181,7 @@ def download(title, year, language, output_dir, source=None):
     if not len(subtitles):
         return
 
-    if source:
-        source_filter = source_filter_gen(SOURCES[source])
-        subtitles = [
-            sub
-            for sub in subtitles
-            if sub["rating"] == "positive" and source_filter(sub["name"])
-        ]
+    subtitles = filter_by_tags(subtitles, tags)
     if not len(subtitles):
         return
 
@@ -169,10 +213,11 @@ def main(argv=None):
         type=type_file,
     )
     parser.add_argument(
-        "-s",
-        "--source",
-        help="Filter subtitles by release source. Supported values are 'bluray' and 'web'",
-        choices=SOURCES,
+        "-t",
+        "--tags",
+        help="Filter subtitles by release tags like type and resolution",
+        type=type_tags,
+        default=[],
     )
 
     args = parser.parse_args()
@@ -182,7 +227,7 @@ def main(argv=None):
         title=args.file["title"],
         year=args.file["year"],
         language=args.language,
-        source=args.source,
+        tags=args.tags,
     )
 
 

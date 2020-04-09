@@ -15,6 +15,11 @@
 - Allow the `language` parameter to be a subscene numeric ID in addition
   to language codes
 
+- Replace the `--source` flag with a more general `--tags` flag which
+  accepts a textual list of release tags with any delimiter e.g. `720p`,
+  `2160p.BluRay` and `WEB-DL 1080p`. You can also pass the original
+  release name and the relevant tags will be extracted from it.
+
 ### Fixes
 
 - Crash due to Windows-1256 encoding used by some Arabic subtitles

@@ -144,8 +144,11 @@ def download(title, year, language, output_dir, source=None):
     print(subtitles[0]["name"])
     subtitle_text = sc.download(subtitles[0]["url"])
     subtitle_filename = Path(output_dir) / f"{title} ({year}).{language['code']}.srt"
-    with open(subtitle_filename, "w+", encoding="utf-8") as subfile:
-        subfile.write(subtitle_text)
+    with open(subtitle_filename, "wb+") as subfile:
+        # Using binary mode since text mode caused some weird
+        # line-ending conversion for some subtitle files and caused
+        # extra empty lines
+        subfile.write(subtitle_text.encode("utf-8"))
 
 
 def main(argv=None):

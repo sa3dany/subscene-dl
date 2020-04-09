@@ -15,6 +15,10 @@
 - Allow the `language` parameter to be a subscene numeric ID in addition
   to language codes
 
+### Fixes
+
+- Crash due to Windows-1256 encoding used by some Arabic subtitles
+
 ### Notes
 
 Some `languages` on subscene are not actually languages. For example,

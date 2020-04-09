@@ -153,8 +153,14 @@ class Subscene:
             if name.endswith(".srt"):
                 with subtitle_zip.open(name) as subtitle_file:
                     # Here we are using "utf-8-sig" since it correcly
-                    # handles both BOM and non-BOM utf-8 files
-                    return subtitle_file.read().decode("utf-8-sig")
+                    # handles both BOM and non-BOM utf-8 files. We
+                    # fallback to window-1256 encoding since many of the
+                    # Arabic subtitles use that encoding¯\_(ツ)_/¯
+                    file_contents = subtitle_file.read()
+                    try:
+                        return file_contents.decode("utf-8-sig")
+                    except UnicodeDecodeError:
+                        return file_contents.decode("windows-1256")
 
     def _parse_title(self, title):
         """Parses a film title and returns a dict with the title and year

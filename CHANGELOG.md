@@ -1,6 +1,6 @@
 # subscene-dl changelog
 
-## HEAD
+## 0.2
 
 ### Changes
 

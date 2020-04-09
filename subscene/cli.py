@@ -1,9 +1,25 @@
 import re
+import sys
 import argparse
 from pathlib import Path
 from iso639 import languages
 from subscene.api import Subscene
+from colorama import Fore, Back, Style
 from typing import List, Dict, Optional
+from colorama import init as termcolor_init
+
+
+def out(message, color=None, lf=True):
+    if color:
+        sys.stdout.write(color)
+    sys.stdout.write(f"{message}{Style.RESET_ALL}")
+    if lf:
+        sys.stdout.write("\n")
+
+
+def error(message, exit_code=1):
+    sys.stdout.write(f"{Fore.RED}{message}\n")
+    exit(exit_code)
 
 
 def keyof(object, value):
@@ -175,17 +191,18 @@ def download(title, year, language, output_dir, tags=[]):
 
     search_result = sc.searchbytitle(title, year)
     if not search_result:
-        return
+        error("Title not found", 1)
+    out(search_result["title"], Fore.YELLOW)
 
     subtitles = sc.subtitles(search_result["id"], language["id"], hi=Subscene.HINONE)
     if not len(subtitles):
-        return
+        error("No subtitles", 1)
 
     subtitles = filter_by_tags(subtitles, tags)
     if not len(subtitles):
-        return
+        error("No subtitles matched tags", 1)
+    out(f'{"Subtitle:": <10}{subtitles[0]["name"]}')
 
-    print(subtitles[0]["name"])
     subtitle_bytes = sc.download(subtitles[0]["url"])
     subtitle_filename = Path(f"{output_dir}/{title} ({year}).{language['code']}.srt")
     with open(subtitle_filename, "wb+") as subfile:
@@ -232,4 +249,5 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    termcolor_init()
     main()

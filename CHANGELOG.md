@@ -20,6 +20,10 @@
   `2160p.BluRay` and `WEB-DL 1080p`. You can also pass the original
   release name and the relevant tags will be extracted from it.
 
+- Improve logging to stdout
+
+- Log errors and exit with positive status code
+
 ### Fixes
 
 - Crash due to Windows-1256 encoding used by some Arabic subtitles

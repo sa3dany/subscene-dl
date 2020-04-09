@@ -218,7 +218,7 @@ class Subscene:
         return {"id": os.path.basename(urlparse(match["url"]).path), **match}
 
     def subtitles(
-        self, title_id: str, language: int, foreign_only=False, hi_flag=2
+        self, title_id: str, language: int, foreign_only=False, hi=2
     ) -> List[Dict]:
         """Get a list of available subtitles for a given title.
 
@@ -228,7 +228,7 @@ class Subscene:
 
         Options:
             foreign_only: Flag for subtitles for foreign-only parts.
-            hi_flag: Hearing impaired flag. Possible values:
+            hi: Hearing impaired flag. Possible values:
                 >>> Subscene.HIANY      # Any (default)
                 2
                 >>> Subscene.HIONLY     # Only subtitles with HI tags
@@ -246,7 +246,7 @@ class Subscene:
             cookies=dict(
                 ForeignOnly=str(foreign_only),
                 LanguageFilter=str(language),
-                HearingImpaired=str(hi_flag),
+                HearingImpaired=str(hi),
                 SortSubtitlesByDate=str(False).lower(),
             ),
         ).text

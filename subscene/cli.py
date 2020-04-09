@@ -23,8 +23,9 @@ def keyof(object, value):
 def type_language(code):
     """Converts a language codes to subscene language ID
 
-    Converts a language code like "ar", "fr" or "pt-br" to the internal numeric ID
-    used by subscene. You can also directly pass the subscene ID.
+    Converts a language code like "ar", "fr" or "pt-br" to the internal
+    numeric ID used by subscene. You can also directly pass the subscene
+    ID.
 
     >>> type_language("mni")
     {'id': 65, 'code': 'mni'}
@@ -100,8 +101,8 @@ def type_file(string) -> dict:
 def type_tags(string) -> List[str]:
     """Extracts usefull metadata about a movie release from a string of common tags
 
-    This can be a custom list of case-insensitive tags using any separator or the
-    original release file name.
+    This can be a custom list of case-insensitive tags using any
+    separator or the original release file name.
 
     Based on: https://github.com/matiassingers/scene-release
 
@@ -172,12 +173,11 @@ def download(title, year, language, output_dir, tags=[]):
 
     sc = Subscene()
 
-    title_info = sc.searchbytitle(title, year)
-    if not title_info:
+    search_result = sc.searchbytitle(title, year)
+    if not search_result:
         return
 
-    language_id = language["id"]
-    subtitles = sc.subtitles(title_info["id"], language_id, hi_flag=Subscene.HINONE)
+    subtitles = sc.subtitles(search_result["id"], language["id"], hi=Subscene.HINONE)
     if not len(subtitles):
         return
 
@@ -186,13 +186,13 @@ def download(title, year, language, output_dir, tags=[]):
         return
 
     print(subtitles[0]["name"])
-    subtitle_text = sc.download(subtitles[0]["url"])
-    subtitle_filename = Path(output_dir) / f"{title} ({year}).{language['code']}.srt"
+    subtitle_bytes = sc.download(subtitles[0]["url"])
+    subtitle_filename = Path(f"{output_dir}/{title} ({year}).{language['code']}.srt")
     with open(subtitle_filename, "wb+") as subfile:
         # Using binary mode since text mode caused some weird
         # line-ending conversion for some subtitle files and caused
         # extra empty lines
-        subfile.write(subtitle_text.encode("utf-8"))
+        subfile.write(subtitle_bytes.encode("utf-8"))
 
 
 def main(argv=None):

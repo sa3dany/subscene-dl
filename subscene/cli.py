@@ -176,7 +176,7 @@ def filter_by_tags(subtitles: List[Dict], tags: List[str]) -> List[Dict]:
     matching_subtitles = []
     for subtitle in subtitles:
         for tag in tags:
-            if tag not in subtitle["name"]:
+            if tag.lower() not in subtitle["name"].lower():
                 break
         else:
             matching_subtitles.append(subtitle)

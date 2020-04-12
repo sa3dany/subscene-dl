@@ -1,5 +1,11 @@
 # subscene-dl changelog
 
+## HEAD
+
+### Fixes
+
+- Tag matching wasn't case-insesetive
+
 ## 0.2
 
 ### Changes

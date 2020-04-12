@@ -6,10 +6,11 @@ from pathlib import Path
 
 import subscene.cli
 from subscene.api import BASE_URL
+from subscene.api import Subscene
 from subscene.htmlparse import (
     TooManyRequestsError,
-    MovieSearchResultsParser,
-    MoviePageParser,
+    TitleSearchResultsParser,
+    TitlePageParser,
     SubtitlePageParser,
 )
 
@@ -22,52 +23,70 @@ def load_tests(loader, tests, ignore):
     return tests
 
 
-class TestMovieSearchResultsParsing(unittest.TestCase):
+class TestTitleSearchResultsParsing(unittest.TestCase):
     def setUp(self):
-        self.parser = MovieSearchResultsParser()
+        self.parser = TitleSearchResultsParser()
 
     def tearDown(self):
         self.parser = None
 
     def test_exact(self):
         self.parser.html = (SAMPLES / "search/exact.html").read_text()
-        self.parser.parse(base_url=BASE_URL)
+        data = self.parser.parse(base_url=BASE_URL)
         self.assertEqual(
-            self.parser.data["exact"],
+            data["results"]["exact"],
             [
                 {
-                    "title": "Official Secrets (2019)",
                     "url": f"{BASE_URL}/subtitles/official-secrets",
+                    "title": "Official Secrets (2019)",
                 }
             ],
         )
 
     def test_multi_exact(self):
         self.parser.html = (SAMPLES / "search/multi_exact.html").read_text()
-        self.parser.parse(base_url=BASE_URL)
+        data = self.parser.parse(base_url=BASE_URL)
         self.assertListEqual(
-            self.parser.data["exact"],
+            data["results"]["exact"],
             [
                 {
-                    "title": "The Parent Trap (1998)",
                     "url": f"{BASE_URL}/subtitles/walt-disneys-the-parent-trap",
+                    "title": "The Parent Trap (1998)",
                 },
                 {
-                    "title": "The Parent Trap (1961)",
                     "url": f"{BASE_URL}/subtitles/the-parent-trap",
+                    "title": "The Parent Trap (1961)",
                 },
             ],
         )
 
     def test_popular(self):
         self.parser.html = (SAMPLES / "search/popular.html").read_text()
-        self.parser.parse(base_url=BASE_URL)
-        self.assertEqual(self.parser.data, {"exact": None, "close": None})
+        data = self.parser.parse(base_url=BASE_URL)
+        with self.assertRaises(KeyError):
+            data["results"]["exact"]
+        with self.assertRaises(KeyError):
+            data["results"]["close"]
+        self.assertEqual(len(data["results"]["popular"]), 12)
+        self.assertEqual(
+            data["results"]["popular"][0],
+            {
+                "title": "A Match Made in Heaven (Rab Ne Bana Di Jodi) (2008)",
+                "url": f"{BASE_URL}/subtitles/a-match-made-in-heaven-rab-ne-bana-di-jodi",
+            },
+        )
+        self.assertEqual(
+            data["results"]["popular"][11],
+            {
+                "title": "Pitbull - Give Me Everything ft. Ne-Yo, Afrojack, Nayer (2011)",
+                "url": f"{BASE_URL}/subtitles/pitbull-give-me-everything-ft-ne-yo-afrojack-nayer",
+            },
+        )
 
     def test_empty(self):
         self.parser.html = (SAMPLES / "search/empty.html").read_text()
-        self.parser.parse(base_url=BASE_URL)
-        self.assertEqual(self.parser.data, {"exact": None, "close": None})
+        data = self.parser.parse(base_url=BASE_URL)
+        self.assertEqual(data, {"results": {}})
 
     def test_rate_limit(self):
         self.parser.html = (SAMPLES / "rate-limit.html").read_text()
@@ -75,38 +94,38 @@ class TestMovieSearchResultsParsing(unittest.TestCase):
             self.parser.parse(base_url=BASE_URL)
 
 
-class TestMoviePageParsing(unittest.TestCase):
+class TestTiltePageParsing(unittest.TestCase):
     def setUp(self):
-        self.parser = MoviePageParser()
+        self.parser = TitlePageParser()
 
     def tearDown(self):
         self.parser = None
 
     def test_many(self):
         self.parser.html = (SAMPLES / "movie/movie.html").read_text(encoding="utf-8")
-        self.parser.parse()
+        data = self.parser.parse()
         self.assertEqual(
-            self.parser.data[1],
+            data["subtitles"][1],
             {
+                "url": "/subtitles/official-secrets/arabic/2171760",
                 "name": "Official.Secrets.2019.REPACK.720p.10bit.BluRay.6CH.x265.HEVC-PSA",
                 "rating": "neutral",
-                "url": "/subtitles/official-secrets/arabic/2171760",
             },
         )
         self.assertEqual(
-            self.parser.data[7],
+            data["subtitles"][7],
             {
+                "url": "/subtitles/official-secrets/arabic/2159626",
                 "name": "Official.Secrets.2019.720p/1080p.BluRay.H264.AAC-RARBG",
                 "rating": "positive",
-                "url": "/subtitles/official-secrets/arabic/2159626",
             },
         )
         self.assertEqual(
-            self.parser.data[15],
+            data["subtitles"][15],
             {
+                "url": "/subtitles/official-secrets/arabic/2088094",
                 "name": "Official Secrets",
                 "rating": "positive",
-                "url": "/subtitles/official-secrets/arabic/2088094",
             },
         )
 
@@ -114,21 +133,21 @@ class TestMoviePageParsing(unittest.TestCase):
         self.parser.html = (SAMPLES / "movie/movie-inline-ad.html").read_text(
             encoding="utf-8"
         )
-        self.parser.parse()
+        data = self.parser.parse()
         self.assertEqual(
-            self.parser.data[4],
+            data["subtitles"][4],
             {
+                "url": "/subtitles/parasite-gisaengchung/arabic/2146903",
                 "name": "Parasite.2019.1080p.BluRay.x264-REGRET",
                 "rating": "positive",
-                "url": "/subtitles/parasite-gisaengchung/arabic/2146903",
             },
         )
         self.assertEqual(
-            self.parser.data[5],
+            data["subtitles"][5],
             {
+                "url": "/subtitles/parasite-gisaengchung/arabic/2146903",
                 "name": "Parasite.2019.720p.BluRay.x264-REGRET",
                 "rating": "positive",
-                "url": "/subtitles/parasite-gisaengchung/arabic/2146903",
             },
         )
 
@@ -136,8 +155,8 @@ class TestMoviePageParsing(unittest.TestCase):
         self.parser.html = (SAMPLES / "movie/movie-empty.html").read_text(
             encoding="utf-8"
         )
-        self.parser.parse()
-        self.assertEqual(self.parser.data, [])
+        data = self.parser.parse()
+        self.assertEqual(data, {"subtitles": []})
 
 
 class TestSubtitlePageParsing(unittest.TestCase):
@@ -151,10 +170,12 @@ class TestSubtitlePageParsing(unittest.TestCase):
         self.parser.html = (SAMPLES / "subtitle/subtitle.html").read_text(
             encoding="utf-8"
         )
-        self.parser.parse(base_url=BASE_URL)
+        data = self.parser.parse(base_url=BASE_URL)
         self.assertEqual(
-            self.parser.data,
-            f"{BASE_URL}/subtitles/arabic-text/tb-75H99hPT5akNHyzyJla9ZN-r_V8IVepJ3sNZNVAHQ8vX4OvGjiskcIlADZs6DDEUzyRN5Skwpdhz4Tlggyx8Q-S3GUe_1W2aiZlH3exU81t32ZxBOntgPa2bZ9YfD0",
+            data,
+            {
+                "downloadUrl": f"{BASE_URL}/subtitles/arabic-text/tb-75H99hPT5akNHyzyJla9ZN-r_V8IVepJ3sNZNVAHQ8vX4OvGjiskcIlADZs6DDEUzyRN5Skwpdhz4Tlggyx8Q-S3GUe_1W2aiZlH3exU81t32ZxBOntgPa2bZ9YfD0"
+            },
         )
 
 
@@ -187,11 +208,7 @@ class TestMovieFileNameMatching(unittest.TestCase):
         self.movie_file.touch()
         self.assertEqual(
             subscene.cli.type_file(str(self.movie_file)),
-            {
-                "path": str(self.temp),
-                "title": "إشاعة حب",
-                "year": "1961",
-            },
+            {"path": str(self.temp), "title": "إشاعة حب", "year": "1961",},
         )
 
     def test_invalid_missing_year(self):

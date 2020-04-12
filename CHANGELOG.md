@@ -2,6 +2,10 @@
 
 ## HEAD
 
+### Changes
+
+- Filter out subtitles with a `bad` rating
+
 ### Fixes
 
 - Tag matching wasn't case-insesetive

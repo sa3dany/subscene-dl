@@ -212,5 +212,60 @@ class TestMovieFileNameMatching(unittest.TestCase):
             subscene.cli.type_file(str(self.movie_file))
 
 
+class TestSubtitleFilteringByRating(unittest.TestCase):
+    def setUp(self):
+        self.parser = TitlePageParser()
+        self.parser.html = (SAMPLES / "movie/movie-bad-subs.html").read_text(
+            encoding="utf-8"
+        )
+        self.data = self.parser.parse()
+
+    def tearDown(self):
+        self.parser = None
+
+    def test_count(self):
+        self.assertEqual(len(subscene.cli.filter_by_rating(self.data["subtitles"])), 7)
+        self.assertEqual(
+            len(
+                subscene.cli.filter_by_rating(
+                    self.data["subtitles"], min_rating=Subscene.RATING.BAD
+                )
+            ),
+            10,
+        )
+        self.assertEqual(
+            len(
+                subscene.cli.filter_by_rating(
+                    self.data["subtitles"], min_rating=Subscene.RATING.POSITIVE
+                )
+            ),
+            4,
+        )
+
+    def test_content(self):
+        self.assertEqual(
+            subscene.cli.filter_by_rating(self.data["subtitles"])[0],
+            {
+                "name": "Ip.Man.2.Legend.of.the.Grandmaster.2010.1080p.BluRay.DTS.x264-CyTSuNee",
+                "rating": "positive",
+                "url": "/subtitles/ip-man-2-legend-of-the-grandmaster-2-yip-man-2/danish/1130097",
+            },
+        )
+        self.assertEqual(
+            subscene.cli.filter_by_rating(self.data["subtitles"])[6],
+            {
+                "name": "Ip.Man.2.2010.720p.BluRay.x264.DTS-WiKi",
+                "rating": "neutral",
+                "url": "/subtitles/ip-man-2-legend-of-the-grandmaster-2-yip-man-2/danish/751207",
+            },
+        )
+
+    def test_unknown_rating(self):
+        with self.assertRaises(AttributeError):
+            subscene.cli.filter_by_rating(
+                self.data["subtitles"], min_rating="excellent"
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -184,6 +184,34 @@ def filter_by_tags(subtitles: List[Dict], tags: List[str]) -> List[Dict]:
     return matching_subtitles
 
 
+def filter_by_rating(
+    subtitles: List[Dict], min_rating: Subscene.RATING = Subscene.RATING.NEUTRAL
+) -> List[Dict]:
+    """Filters subtitles by the subscene user ratings
+
+    Subscene currently has three ratings: "Positive", "Neutral" and "Bad"
+    which are represented by the API as:
+        `Subscene.RATING.POSITIVE`,
+        `Subscene.RATING.NEUTRAL` and
+        `Subscene.RATING.BAD`
+    """
+
+    rating_scale = [
+        Subscene.RATING.BAD.value,
+        Subscene.RATING.NEUTRAL.value,
+        Subscene.RATING.POSITIVE.value,
+    ]
+
+    min_rating_value = rating_scale.index(min_rating.value)
+    matching_subtitles = []
+    for subtitle in subtitles:
+        subtitle_rating = rating_scale.index(subtitle["rating"])
+        if subtitle_rating >= min_rating_value:
+            matching_subtitles.append(subtitle)
+
+    return matching_subtitles
+
+
 def download(title, year, language, output_dir, tags=[]):
     """Downloads movie subtitles from subscene"""
 
@@ -201,7 +229,10 @@ def download(title, year, language, output_dir, tags=[]):
     subtitles = filter_by_tags(subtitles, tags)
     if not len(subtitles):
         error("No subtitles matched tags", 1)
-    out(f'{"Subtitle:": <10}{subtitles[0]["name"]}')
+
+    subtitles = filter_by_rating(subtitles)
+    if not len(subtitles):
+        error("No matching subtitles with 'neutral' or better rating", 1)
 
     subtitle_bytes = sc.download(subtitles[0]["url"])
     subtitle_filename = Path(f"{output_dir}/{title} ({year}).{language['code']}.srt")
@@ -210,6 +241,8 @@ def download(title, year, language, output_dir, tags=[]):
         # line-ending conversion for some subtitle files and caused
         # extra empty lines
         subfile.write(subtitle_bytes.encode("utf-8"))
+
+    out(f'{"Subtitle:": <10}{subtitles[0]["name"]}')
 
 
 def main(argv=None):

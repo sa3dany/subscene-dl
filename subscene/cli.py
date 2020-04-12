@@ -59,14 +59,14 @@ def type_language(code):
 
     if code == "pt-br":
         # Special case. See comment in api.py
-        return {"id": Subscene.LANGUAGES[code], "code": "pt"}
+        return {"id": Subscene.LANGUAGES["PT_BR"].value, "code": "pt"}
 
     # Allow passing subscene numeric language IDs directly
     try:
         language_id = int(code)
-        language_code = keyof(Subscene.LANGUAGES, language_id)
-        if language_code:
-            return {"id": language_id, "code": language_code}
+        language = Subscene.LANGUAGES(language_id)
+        if language:
+            return {"id": language_id, "code": language.name.lower()}
         raise argparse.ArgumentTypeError(
             "The language ID specified is not a valid subscene language ID"
         )
@@ -85,12 +85,12 @@ def type_language(code):
         )
 
     available_code = language.part1 or language.part2b
-    if available_code not in Subscene.LANGUAGES:
+    if not Subscene.LANGUAGES[available_code.upper()]:
         raise argparse.ArgumentTypeError(
             "The language code specified is not supported by subscene.com"
         )
 
-    return {"id": Subscene.LANGUAGES[available_code], "code": code}
+    return {"id": Subscene.LANGUAGES[available_code.upper()].value, "code": code}
 
 
 def type_file(string) -> dict:

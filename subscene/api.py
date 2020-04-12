@@ -3,6 +3,7 @@ import zipfile
 import time
 import re
 import os
+from enum import Enum
 from io import BytesIO
 from urllib.parse import urlparse
 from jellyfish import jaro_winkler
@@ -32,78 +33,77 @@ class Subscene:
     # if a 2 letter code is not avilable) code except for Brazillian
     # Portuguese which does not have a coresponding code and instead I
     # choose to use the IETF tag 'pt-BR'
-    LANGUAGES = {
-        "sq": 1,
-        "ar": 2,
-        "pt-br": 4,
-        "bg": 5,
-        "hr": 8,
-        "cs": 9,
-        "da": 10,
-        "nl": 11,
-        "en": 13,
-        "et": 16,
-        "fi": 17,
-        "fr": 18,
-        "de": 19,
-        "el": 21,
-        "iw": 22,
-        "hu": 23,
-        "is": 25,
-        "it": 26,
-        "ja": 27,
-        "ko": 28,
-        "lv": 29,
-        "no": 30,
-        "pl": 31,
-        "pt": 32,
-        "ro": 33,
-        "ru": 34,
-        "sr": 35,
-        "sk": 36,
-        "sl": 37,
-        "es": 38,
-        "sv": 39,
-        "th": 40,
-        "tr": 41,
-        "ur": 42,
-        "lt": 43,
-        "id": 44,
-        "vi": 45,
-        "fa": 46,
-        "eo": 47,
-        "mk": 48,
-        "ca": 49,
-        "ms": 50,
-        "hi": 51,
-        "ku": 52,
-        "tl": 53,
-        "bn": 54,
-        "az": 55,
-        "uk": 56,
-        "kl": 57,
-        "si": 58,
-        "ta": 59,
-        "bs": 60,
-        "my": 61,
-        "ka": 62,
-        "te": 63,
-        "ml": 64,
-        "mni": 65,
-        "pa": 66,
-        "ps": 67,
-        "be": 68,
-        "so": 70,
-        "yo": 71,
-        "mn": 72,
-        "hy": 73,
-        "eu": 74,
-        "sw": 75,
-        "su": 76,
-        "kn": 78,
-        "km": 79,
-        "ne": 80,
-    }
+    class LANGUAGES(Enum):
+        SQ = 1
+        AR = 2
+        PT_BR = 4
+        BG = 5
+        HR = 8
+        CS = 9
+        DA = 10
+        NL = 11
+        EN = 13
+        ET = 16
+        FI = 17
+        FR = 18
+        DE = 19
+        EL = 21
+        IW = 22
+        HU = 23
+        IS = 25
+        IT = 26
+        JA = 27
+        KO = 28
+        LV = 29
+        NO = 30
+        PL = 31
+        PT = 32
+        RO = 33
+        RU = 34
+        SR = 35
+        SK = 36
+        SL = 37
+        ES = 38
+        SV = 39
+        TH = 40
+        TR = 41
+        UR = 42
+        LT = 43
+        ID = 44
+        VI = 45
+        FA = 46
+        EO = 47
+        MK = 48
+        CA = 49
+        MS = 50
+        HI = 51
+        KU = 52
+        TL = 53
+        BN = 54
+        AZ = 55
+        UK = 56
+        KL = 57
+        SI = 58
+        TA = 59
+        BS = 60
+        MY = 61
+        KA = 62
+        TE = 63
+        ML = 64
+        MNI = 65
+        PA = 66
+        PS = 67
+        BE = 68
+        SO = 70
+        YO = 71
+        MN = 72
+        HY = 73
+        EU = 74
+        SW = 75
+        SU = 76
+        KN = 78
+        KM = 79
+        NE = 80
 
     # The following `languages` dot not have a language code since they
     # either refer to an encoding or dual-language subtitle zip files.
@@ -121,9 +121,30 @@ class Subscene:
     # These are the flags used by subscene to filter subtitles based on
     # the availiablity of HI tags. These values are sent as request
     # cookie "HearingImpaired"
-    HIANY = 2
-    HIONLY = 1
-    HINONE = 0
+    class HI(Enum):
+        HIANY = 2
+        HIONLY = 1
+        HINONE = 0
+
+    class RATING(Enum):
+        """Rating scale used by subscene.com.
+
+        Subscene only exposes these textual ratings and does not prodive
+        a numerical scale.
+        """
+
+        POSITIVE = "positive"
+        NEUTRAL = "neutral"
+        BAD = "bad"
+
+    class FILE_TYPES(Enum):
+        SRT = "srt"
+        SRT_STYLE = "srt.style"
+        SUB = "sub"
+        TXT = "txt"
+        SSA = "ssa"
+        ASS = "ass"
+        SMI = "smi"
 
     def __init__(self):
         # As of Apr 2020, subscene.com is using CloudFlare. We make sure

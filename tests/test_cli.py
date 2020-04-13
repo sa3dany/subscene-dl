@@ -78,11 +78,11 @@ class TestSubtitleFilteringByRating(unittest.TestCase):
         self.parser = None
 
     def test_count(self):
-        self.assertEqual(len(subscene.cli.filter_by_rating(self.data["subtitles"])), 7)
+        self.assertEqual(len(subscene.cli.filter_by_rating(self.data)), 7)
         self.assertEqual(
             len(
                 subscene.cli.filter_by_rating(
-                    self.data["subtitles"], min_rating=Subscene.RATING.BAD
+                    self.data, min_rating=Subscene.RATING.BAD
                 )
             ),
             10,
@@ -90,7 +90,7 @@ class TestSubtitleFilteringByRating(unittest.TestCase):
         self.assertEqual(
             len(
                 subscene.cli.filter_by_rating(
-                    self.data["subtitles"], min_rating=Subscene.RATING.POSITIVE
+                    self.data, min_rating=Subscene.RATING.POSITIVE
                 )
             ),
             4,
@@ -98,7 +98,7 @@ class TestSubtitleFilteringByRating(unittest.TestCase):
 
     def test_content(self):
         self.assertEqual(
-            subscene.cli.filter_by_rating(self.data["subtitles"])[0],
+            subscene.cli.filter_by_rating(self.data)[0],
             {
                 "name": "Ip.Man.2.Legend.of.the.Grandmaster.2010.1080p.BluRay.DTS.x264-CyTSuNee",
                 "rating": "positive",
@@ -106,7 +106,7 @@ class TestSubtitleFilteringByRating(unittest.TestCase):
             },
         )
         self.assertEqual(
-            subscene.cli.filter_by_rating(self.data["subtitles"])[6],
+            subscene.cli.filter_by_rating(self.data)[6],
             {
                 "name": "Ip.Man.2.2010.720p.BluRay.x264.DTS-WiKi",
                 "rating": "neutral",
@@ -117,7 +117,7 @@ class TestSubtitleFilteringByRating(unittest.TestCase):
     def test_unknown_rating(self):
         with self.assertRaises(AttributeError):
             subscene.cli.filter_by_rating(
-                self.data["subtitles"], min_rating="excellent"
+                self.data, min_rating="excellent"
             )
 
 

@@ -57,7 +57,7 @@ class TitleSearchResultsParser(BaseParser):
                 sections[key] = []
                 for movie in self._movies.parse(section[0], url=base_url):
                     sections[key].append(movie)
-        return {"results": sections}
+        return sections
 
 
 class TitlePageParser(BaseParser):
@@ -65,7 +65,6 @@ class TitlePageParser(BaseParser):
         super().__init__(html)
         self._empty = String(quant="?", css=".subtitles.byFilm tbody tr td.empty")
         self._rows = Group(
-            name="subtitles",
             quant="+",
             css=".subtitles.byFilm tbody td.a1",
             children=[
@@ -93,14 +92,14 @@ class TitlePageParser(BaseParser):
     def parse(self, base_url: str = None) -> Dict:
         self._parse_errors()
         if self._empty.parse(self.html):
-            return {"subtitles": []}
+            return []
         return self._rows.parse(self.html, url=base_url)
 
 
 class SubtitlePageParser(BaseParser):
     def __init__(self, html: str = ""):
         super().__init__(html)
-        self._download = Url(name="downloadUrl", quant="1", css=".download a")
+        self._download = Url(quant="1", css=".download a")
 
     def parse(self, base_url: str = None) -> Dict:
         self._parse_errors()

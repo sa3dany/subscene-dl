@@ -5,6 +5,7 @@
 ### Changes
 
 - Filter out subtitles with a `bad` rating
+- Split tests into separate files
 
 ### Fixes
 

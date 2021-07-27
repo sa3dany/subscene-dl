@@ -19,6 +19,7 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.6",
-    install_requires=["chardet", "colorama", "iso-639", "jellyfish", "requests"],
+    install_requires=["colorama", "iso-639",
+                      "jellyfish", "lxml", "requests", "xextract"],
     entry_points={"console_scripts": ["subscene-dl = subscene.cli:main"]},
 )

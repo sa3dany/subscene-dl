@@ -1,6 +1,6 @@
 import unittest
 from pathlib import Path
-from subscene.api import BASE_URL
+from subscene import api
 from subscene.htmlparse import (
     TooManyRequestsError,
     TitleSearchResultsParser,
@@ -20,12 +20,12 @@ class TestTitleSearchResultsParsing(unittest.TestCase):
 
     def test_exact(self):
         self.parser.html = (SAMPLES / "search/exact.html").read_text()
-        data = self.parser.parse(base_url=BASE_URL)
+        data = self.parser.parse(base_url=api.BASE_URL)
         self.assertEqual(
             data["exact"],
             [
                 {
-                    "url": f"{BASE_URL}/subtitles/official-secrets",
+                    "url": f"{api.BASE_URL}/subtitles/official-secrets",
                     "title": "Official Secrets (2019)",
                 }
             ],
@@ -33,16 +33,16 @@ class TestTitleSearchResultsParsing(unittest.TestCase):
 
     def test_multi_exact(self):
         self.parser.html = (SAMPLES / "search/multi_exact.html").read_text()
-        data = self.parser.parse(base_url=BASE_URL)
+        data = self.parser.parse(base_url=api.BASE_URL)
         self.assertListEqual(
             data["exact"],
             [
                 {
-                    "url": f"{BASE_URL}/subtitles/walt-disneys-the-parent-trap",
+                    "url": f"{api.BASE_URL}/subtitles/walt-disneys-the-parent-trap",
                     "title": "The Parent Trap (1998)",
                 },
                 {
-                    "url": f"{BASE_URL}/subtitles/the-parent-trap",
+                    "url": f"{api.BASE_URL}/subtitles/the-parent-trap",
                     "title": "The Parent Trap (1961)",
                 },
             ],
@@ -50,7 +50,7 @@ class TestTitleSearchResultsParsing(unittest.TestCase):
 
     def test_popular(self):
         self.parser.html = (SAMPLES / "search/popular.html").read_text()
-        data = self.parser.parse(base_url=BASE_URL)
+        data = self.parser.parse(base_url=api.BASE_URL)
         with self.assertRaises(KeyError):
             data["exact"]
         with self.assertRaises(KeyError):
@@ -60,26 +60,26 @@ class TestTitleSearchResultsParsing(unittest.TestCase):
             data["popular"][0],
             {
                 "title": "A Match Made in Heaven (Rab Ne Bana Di Jodi) (2008)",
-                "url": f"{BASE_URL}/subtitles/a-match-made-in-heaven-rab-ne-bana-di-jodi",
+                "url": f"{api.BASE_URL}/subtitles/a-match-made-in-heaven-rab-ne-bana-di-jodi",
             },
         )
         self.assertEqual(
             data["popular"][11],
             {
                 "title": "Pitbull - Give Me Everything ft. Ne-Yo, Afrojack, Nayer (2011)",
-                "url": f"{BASE_URL}/subtitles/pitbull-give-me-everything-ft-ne-yo-afrojack-nayer",
+                "url": f"{api.BASE_URL}/subtitles/pitbull-give-me-everything-ft-ne-yo-afrojack-nayer",
             },
         )
 
     def test_empty(self):
         self.parser.html = (SAMPLES / "search/empty.html").read_text()
-        data = self.parser.parse(base_url=BASE_URL)
+        data = self.parser.parse(base_url=api.BASE_URL)
         self.assertEqual(data, {})
 
     def test_rate_limit(self):
         self.parser.html = (SAMPLES / "rate-limit.html").read_text()
         with self.assertRaises(TooManyRequestsError):
-            self.parser.parse(base_url=BASE_URL)
+            self.parser.parse(base_url=api.BASE_URL)
 
 
 class TestTiltePageParsing(unittest.TestCase):
@@ -158,10 +158,10 @@ class TestSubtitlePageParsing(unittest.TestCase):
         self.parser.html = (SAMPLES / "subtitle/subtitle.html").read_text(
             encoding="utf-8"
         )
-        data = self.parser.parse(base_url=BASE_URL)
+        data = self.parser.parse(base_url=api.BASE_URL)
         self.assertEqual(
             data,
-            f"{BASE_URL}/subtitles/arabic-text/tb-75H99hPT5akNHyzyJla9ZN-r_V8IVepJ3sNZNVAHQ8vX4OvGjiskcIlADZs6DDEUzyRN5Skwpdhz4Tlggyx8Q-S3GUe_1W2aiZlH3exU81t32ZxBOntgPa2bZ9YfD0",
+            f"{api.BASE_URL}/subtitles/arabic-text/tb-75H99hPT5akNHyzyJla9ZN-r_V8IVepJ3sNZNVAHQ8vX4OvGjiskcIlADZs6DDEUzyRN5Skwpdhz4Tlggyx8Q-S3GUe_1W2aiZlH3exU81t32ZxBOntgPa2bZ9YfD0",
         )
 
 

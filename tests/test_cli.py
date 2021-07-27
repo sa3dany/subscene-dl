@@ -4,15 +4,14 @@ import tempfile
 import argparse
 from pathlib import Path
 
-import subscene.cli
-from subscene.api import Subscene
+from subscene import api, cli
 from subscene.htmlparse import TitlePageParser
 
 SAMPLES = Path(__file__).parent / "samples"
 
 
 def load_tests(loader, tests, ignore):
-    tests.addTests(doctest.DocTestSuite(subscene.cli, optionflags=doctest.ELLIPSIS))
+    tests.addTests(doctest.DocTestSuite(cli, optionflags=doctest.ELLIPSIS))
     return tests
 
 
@@ -32,7 +31,7 @@ class TestMovieFileNameMatching(unittest.TestCase):
         self.movie_file = self.temp / "Parasite (Gisaengchung 기생충) (2019).mp4"
         self.movie_file.touch()
         self.assertEqual(
-            subscene.cli.type_file(str(self.movie_file)),
+            cli.arg_file(str(self.movie_file)),
             {
                 "path": str(self.temp),
                 "title": "Parasite (Gisaengchung 기생충)",
@@ -44,7 +43,7 @@ class TestMovieFileNameMatching(unittest.TestCase):
         self.movie_file = self.temp / "إشاعة حب (1961).mp4"
         self.movie_file.touch()
         self.assertEqual(
-            subscene.cli.type_file(str(self.movie_file)),
+            cli.arg_file(str(self.movie_file)),
             {"path": str(self.temp), "title": "إشاعة حب", "year": "1961",},
         )
 
@@ -52,18 +51,18 @@ class TestMovieFileNameMatching(unittest.TestCase):
         self.movie_file = self.temp / "Ne Zha.mkv"
         self.movie_file.touch()
         with self.assertRaises(argparse.ArgumentTypeError):
-            subscene.cli.type_file(str(self.movie_file))
+            cli.arg_file(str(self.movie_file))
 
     def test_invalid_missing_title(self):
         self.movie_file = self.temp / "(1917).avi"
         self.movie_file.touch()
         with self.assertRaises(argparse.ArgumentTypeError):
-            subscene.cli.type_file(str(self.movie_file))
+            cli.arg_file(str(self.movie_file))
 
     def test_invalid_missing_file(self):
         self.movie_file = self.temp / "ThisFileWontExists.mkv"
         with self.assertRaises(argparse.ArgumentTypeError):
-            subscene.cli.type_file(str(self.movie_file))
+            cli.arg_file(str(self.movie_file))
 
 
 class TestSubtitleFilteringByRating(unittest.TestCase):
@@ -78,27 +77,21 @@ class TestSubtitleFilteringByRating(unittest.TestCase):
         self.parser = None
 
     def test_count(self):
-        self.assertEqual(len(subscene.cli.filter_by_rating(self.data)), 7)
+        self.assertEqual(len(cli.filter_by_rating(self.data)), 7)
         self.assertEqual(
-            len(
-                subscene.cli.filter_by_rating(
-                    self.data, min_rating=Subscene.RATING.BAD
-                )
-            ),
+            len(cli.filter_by_rating(self.data, min_rating=api.RATING.BAD)),
             10,
         )
         self.assertEqual(
             len(
-                subscene.cli.filter_by_rating(
-                    self.data, min_rating=Subscene.RATING.POSITIVE
-                )
+                cli.filter_by_rating(self.data, min_rating=api.RATING.POSITIVE)
             ),
             4,
         )
 
     def test_content(self):
         self.assertEqual(
-            subscene.cli.filter_by_rating(self.data)[0],
+            cli.filter_by_rating(self.data)[0],
             {
                 "name": "Ip.Man.2.Legend.of.the.Grandmaster.2010.1080p.BluRay.DTS.x264-CyTSuNee",
                 "rating": "positive",
@@ -106,7 +99,7 @@ class TestSubtitleFilteringByRating(unittest.TestCase):
             },
         )
         self.assertEqual(
-            subscene.cli.filter_by_rating(self.data)[6],
+            cli.filter_by_rating(self.data)[6],
             {
                 "name": "Ip.Man.2.2010.720p.BluRay.x264.DTS-WiKi",
                 "rating": "neutral",
@@ -116,9 +109,7 @@ class TestSubtitleFilteringByRating(unittest.TestCase):
 
     def test_unknown_rating(self):
         with self.assertRaises(AttributeError):
-            subscene.cli.filter_by_rating(
-                self.data, min_rating="excellent"
-            )
+            cli.filter_by_rating(self.data, min_rating="excellent")
 
 
 if __name__ == "__main__":

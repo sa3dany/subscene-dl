@@ -3,10 +3,13 @@ import sys
 import argparse
 from pathlib import Path
 from iso639 import languages
-from subscene.api import Subscene
+from jellyfish import jaro_winkler
 from colorama import Fore, Back, Style
 from typing import List, Dict, Optional
 from colorama import init as termcolor_init
+
+from subscene import api
+from subscene import utils
 
 
 def out(message, color=None, lf=True):
@@ -22,49 +25,35 @@ def error(message, exit_code=1):
     exit(exit_code)
 
 
-def keyof(object, value):
-    """Returns key in dict that has the given value
-
-    Returns `None` if there is no such value in dict.
-    """
-
-    keys = list(object.keys())
-    values = list(object.values())
-    try:
-        return keys[values.index(value)]
-    except ValueError:
-        return None
-
-
-def type_language(code):
-    """Converts a language codes to subscene language ID
+def arg_language(code):
+    """Converts a language code to subscene language ID
 
     Converts a language code like "ar", "fr" or "pt-br" to the internal
     numeric ID used by subscene. You can also directly pass the subscene
     ID.
 
-    >>> type_language("mni")
+    >>> arg_language("mni")
     {'id': 65, 'code': 'mni'}
 
-    >>> type_language("pt-br")
+    >>> arg_language("pt-br")
     {'id': 4, 'code': 'pt'}
 
-    >>> type_language("tu")
+    >>> arg_language("tu")
     Traceback (most recent call last):
     argparse.ArgumentTypeError: ...
 
-    >>> type_language("50")
+    >>> arg_language("50")
     {'id': 50, 'code': 'ms'}
     """
 
     if code == "pt-br":
         # Special case. See comment in api.py
-        return {"id": Subscene.LANGUAGES["PT_BR"].value, "code": "pt"}
+        return {"id": api.LANGUAGES["PT_BR"].value, "code": "pt"}
 
     # Allow passing subscene numeric language IDs directly
     try:
         language_id = int(code)
-        language = Subscene.LANGUAGES(language_id)
+        language = api.LANGUAGES(language_id)
         if language:
             return {"id": language_id, "code": language.name.lower()}
         raise argparse.ArgumentTypeError(
@@ -85,15 +74,15 @@ def type_language(code):
         )
 
     available_code = language.part1 or language.part2b
-    if not Subscene.LANGUAGES[available_code.upper()]:
+    if not api.LANGUAGES[available_code.upper()]:
         raise argparse.ArgumentTypeError(
             "The language code specified is not supported by subscene.com"
         )
 
-    return {"id": Subscene.LANGUAGES[available_code.upper()].value, "code": code}
+    return {"id": api.LANGUAGES[available_code.upper()].value, "code": available_code}
 
 
-def type_file(string) -> dict:
+def arg_file(string) -> dict:
     """Represents the expected format for a movie file name: 'Title (Year).ext'"""
 
     file_path = Path(string)
@@ -114,7 +103,7 @@ def type_file(string) -> dict:
     }
 
 
-def type_tags(string) -> List[str]:
+def arg_tags(string) -> List[str]:
     """Extracts usefull metadata about a movie release from a string of common tags
 
     This can be a custom list of case-insensitive tags using any
@@ -122,19 +111,19 @@ def type_tags(string) -> List[str]:
 
     Based on: https://github.com/matiassingers/scene-release
 
-    >>> type_tags("720p.HDTV")
+    >>> arg_tags("720p.HDTV")
     ['720p', 'HDTV']
 
-    >>> type_tags("2160p 4k EXTENDED BLURAY")
+    >>> arg_tags("2160p 4k EXTENDED BLURAY")
     ['2160p', 'EXTENDED', 'BLURAY']
 
-    >>> type_tags("Extended.Cut.DVDRip")
+    >>> arg_tags("Extended.Cut.DVDRip")
     ['Extended.Cut', 'DVDRip']
 
-    >>> type_tags("720p WEB-DL")
+    >>> arg_tags("720p WEB-DL")
     ['720p', 'WEB-DL']
 
-    >>> type_tags("3D.BLURAY")
+    >>> arg_tags("3D.BLURAY")
     ['3D', 'BLURAY']
     """
 
@@ -156,6 +145,61 @@ def type_tags(string) -> List[str]:
         if match:
             tags.append(match.group(0))
     return tags
+
+
+def decode(blob: bytes, language_code) -> str:
+    """Gues encoding of subtitle
+
+    Based on work of Hannes Tismer
+    see: https://github.com/pannal/Sub-Zero.bundle
+    """
+    # Here we are using "utf-8-sig" since it correcly
+    # handles both BOM and non-BOM utf-8 files.
+    encodings = ["utf-8-sig"]
+
+    if language_code == "ar":
+        # fallback to window-1256 encoding since many of the
+        # Arabic subtitles use that encoding ¯\_(ツ)_/¯
+        encodings.extend(["windows-1256", "utf-16"])
+
+    for encoding in encodings:
+        try:
+            decoded = blob.decode(encoding)
+        except UnicodeDecodeError:
+            print(f'failed to decode as {language_code}')
+            pass
+        else:
+            return decoded
+
+    raise ValueError("Could not decode subtitle")
+
+
+def filter_by_rating(
+    subtitles: List[Dict], min_rating: api.RATING = api.RATING.NEUTRAL
+) -> List[Dict]:
+    """Filters subtitles by the subscene user ratings
+
+    Subscene currently has three ratings: "Positive", "Neutral" and "Bad"
+    which are represented by the API as:
+        `Subscene.RATING.POSITIVE`,
+        `Subscene.RATING.NEUTRAL` and
+        `Subscene.RATING.BAD`
+    """
+
+    rating_scale = [
+        api.RATING.BAD.value,
+        api.RATING.NEUTRAL.value,
+        api.RATING.POSITIVE.value,
+    ]
+
+    min_rating_value = rating_scale.index(min_rating.value)
+    matching_subtitles = []
+    for subtitle in subtitles:
+        subtitle_rating = rating_scale.index(subtitle["rating"])
+        if subtitle_rating >= min_rating_value:
+            matching_subtitles.append(subtitle)
+
+    return matching_subtitles
 
 
 def filter_by_tags(subtitles: List[Dict], tags: List[str]) -> List[Dict]:
@@ -184,45 +228,48 @@ def filter_by_tags(subtitles: List[Dict], tags: List[str]) -> List[Dict]:
     return matching_subtitles
 
 
-def filter_by_rating(
-    subtitles: List[Dict], min_rating: Subscene.RATING = Subscene.RATING.NEUTRAL
-) -> List[Dict]:
-    """Filters subtitles by the subscene user ratings
-
-    Subscene currently has three ratings: "Positive", "Neutral" and "Bad"
-    which are represented by the API as:
-        `Subscene.RATING.POSITIVE`,
-        `Subscene.RATING.NEUTRAL` and
-        `Subscene.RATING.BAD`
-    """
-
-    rating_scale = [
-        Subscene.RATING.BAD.value,
-        Subscene.RATING.NEUTRAL.value,
-        Subscene.RATING.POSITIVE.value,
-    ]
-
-    min_rating_value = rating_scale.index(min_rating.value)
-    matching_subtitles = []
-    for subtitle in subtitles:
-        subtitle_rating = rating_scale.index(subtitle["rating"])
-        if subtitle_rating >= min_rating_value:
-            matching_subtitles.append(subtitle)
-
-    return matching_subtitles
+def match_title(title, year, results):
+    """Find the best matching title from subscene search results"""
+    # TODO: When comparing years: 1 year +/- is okay as long as there is
+    # no other close matches
+    results = results["results"]
+    if results["exact"]:
+        # If a single exact match, just return that
+        if len(results["exact"]) == 1:
+            return results["exact"][0]
+        # Else, look for the exact match with same year as our title
+        for match in results["exact"]:
+            if match["year"] == year:
+                return match
+    # If only close matches, return the closest with the same year
+    if results["close"]:
+        best_score = 0
+        best_match = None
+        same_year_matches = [
+            match for match in results["close"] if match["year"] == year
+        ]
+        for match in same_year_matches:
+            score = jaro_winkler(match["title"], title)
+            if score > best_score:
+                best_score = score
+                best_match = match
+        return best_match
+    return None
 
 
 def download(title, year, language, output_dir, tags=[]):
     """Downloads movie subtitles from subscene"""
 
-    sc = Subscene()
+    sc = api.Subscene()
 
-    search_result = sc.searchbytitle(title, year)
-    if not search_result:
+    search_results = sc.search_titles(title)
+    search_match = match_title(title, year, search_results)
+    if not search_match:
         error("Title not found", 1)
-    out(search_result["title"], Fore.YELLOW)
+    out(f'{search_match["title"]} {search_match["year"]}', Fore.YELLOW)
 
-    subtitles = sc.subtitles(search_result["id"], language["id"], hi=Subscene.HINONE)
+    subtitles = sc.get_title(search_match["url"], language["id"], hi=api.HI.HINONE)
+    subtitles = subtitles["subtitles"]
     if not len(subtitles):
         error("No subtitles", 1)
 
@@ -234,13 +281,24 @@ def download(title, year, language, output_dir, tags=[]):
     if not len(subtitles):
         error("No matching subtitles with 'neutral' or better rating", 1)
 
-    subtitle_bytes = sc.download(subtitles[0]["url"])
-    subtitle_filename = Path(f"{output_dir}/{title} ({year}).{language['code']}.srt")
-    with open(subtitle_filename, "wb+") as subfile:
+    subtitle_pack = sc.get_subtitle(subtitles[0]["url"])
+    if len(subtitle_pack["files"]) > 1:
+        out(f'{"Subtitle:": <10}{subtitles[0]["name"]}')
+        raise NotImplementedError("Subtitle packs are currently not supported")
+
+    output_filename = Path(f"{output_dir}/{title} ({year}).{language['code']}.srt")
+    with open(output_filename, "wb+") as file:
         # Using binary mode since text mode caused some weird
         # line-ending conversion for some subtitle files and caused
         # extra empty lines
-        subfile.write(subtitle_bytes.encode("utf-8"))
+
+        subtitle_file = subtitle_pack["files"][0]["body"]
+        subtitle_bytes = subtitle_file.read()
+        subtitle_file.close()
+
+        subtitle_text = decode(subtitle_bytes, language['code'])
+
+        file.write(subtitle_text.encode("utf-8"))
 
     out(f'{"Subtitle:": <10}{subtitles[0]["name"]}')
 
@@ -255,18 +313,18 @@ def main(argv=None):
     parser.add_argument(
         "language",
         help="ISO-639-1 (2-letter) or ISO-639-2/B (3-letter) language code",
-        type=type_language,
+        type=arg_language,
     )
     parser.add_argument(
         "file",
         help="File name must be in the form 'MOVIE_NAME (RELEASE_DATE)'",
-        type=type_file,
+        type=arg_file,
     )
     parser.add_argument(
         "-t",
         "--tags",
         help="Filter subtitles by release tags like type and resolution",
-        type=type_tags,
+        type=arg_tags,
         default=[],
     )
 

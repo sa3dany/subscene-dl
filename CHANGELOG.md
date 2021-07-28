@@ -1,15 +1,20 @@
 # subscene-dl changelog
 
-## HEAD
+## 0.3
 
 ### Changes
 
+- Code refactoring
 - Filter out subtitles with a `bad` rating
 - Split tests into separate files
 
 ### Fixes
 
 - Tag matching wasn't case-insesetive
+
+### Other
+
+- Prepare for pypi release
 
 ## 0.2
 
